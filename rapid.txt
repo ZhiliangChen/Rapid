@@ -1,0 +1,194 @@
+MODULE TESTmove
+    PROC main()
+        VAR socketdev server_socket;
+	    VAR socketdev client_socket;
+        !VAR socketstatus status;       
+        
+        !VAR jointtarget pos15;
+        VAR robtarget pos1;
+        VAR robtarget tpos;
+        VAR robtarget ipos;
+        VAR pos pos2;
+        VAR num x1;
+        VAR num y1;
+        VAR num z1;
+        VAR num q1;
+        VAR num q2;
+        VAR num q3;
+        VAR num q4;
+        VAR num c1;
+        VAR num c4;
+        VAR num c6;
+        VAR num cx;
+        VAR num e1;
+        VAR num e2;
+        VAR num e3;
+        VAR num len;
+        VAR num minindex;
+	    VAR num maxindex;
+        VAR string str;
+        VAR string receive_str;
+        VAR string sen_str;
+        VAR bool isreach;
+        VAR bool flag;
+        VAR bool kinecton;
+        VAR bool transok;
+        VAR bool finok;
+        !VAR string str15 := "[[20,20,20,0,0,0],[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]]";
+        VAR robtarget p15 := [[600,500,225],[1,0,0,0],[1,1,0,0],[9E9,9E9,9E9,9E9,9E9,9E9]];
+        SocketCreate server_socket;
+        SocketBind server_socket,"192.168.125.1", 1502;
+        SocketListen server_socket;
+        kinecton := TRUE;
+        WHILE kinecton DO
+            SocketAccept server_socket, client_socket\time:=WAIT_MAX;
+            TPWrite "Connected!";
+            flag := TRUE;
+            WHILE flag DO
+                str :="";
+                SocketReceive client_socket \Str := receive_str \time:=WAIT_MAX;
+                minindex := StrFind(receive_str, 1, "#");
+			    len := StrLen(receive_str);
+                IF (minindex<len+1) THEN
+                    minindex := StrFind(receive_str,1,"#");
+			        maxindex := StrFind(receive_str,1,"@");
+                    str := StrPart(receive_str, minindex+1, maxindex-minindex-1);
+                    TEST str
+                        CASE "end":
+                            TPWrite "End!";
+                            SocketClose client_socket;
+                            flag:=FALSE;
+                        CASE "get":
+                            TPWrite "Send pos!";
+                            
+			    !读取机械臂当前位置，返回robtarget的值
+                            tpos := CRobT(\Tool:=tool0 \WObj:=wobj0);
+			    ！robtarget.trans的数据类型为pos，.rot数据类型为orient，.robconf数据类型为confdata
+                            x1 := tpos.trans.x;
+                            y1 := tpos.trans.y;
+                            z1 := tpos.trans.z;
+                            e1 := EulerZYX(\X, tpos.rot);
+                            e2 := EulerZYX(\Y, tpos.rot);
+                            e3 := EulerZYX(\Z, tpos.rot);
+                            c1 := tpos.robconf.cf1;
+                            c4 := tpos.robconf.cf4;
+                            c6 := tpos.robconf.cf6;
+                            cx := tpos.robconf.cfx;
+                            
+                            sen_str := "#X"+NumToStr(x1,3)+"Y"+NumToStr(y1,3)+"Z"+NumToStr(z1,3)+"Q"+NumToStr(e1,3)+"W"+NumToStr(e2,3)+"E"+NumToStr(e3,3)+"R"+NumToStr(c1,0)+"U"+NumToStr(c4,0)+"I"+NumToStr(c6,0)+"O"+NumToStr(cx,0)+"P";
+                            SocketSend client_socket \Str:=sen_str;
+                        CASE "mov":
+                            TPWrite "MOVE!";
+                            
+                            str := "";
+                            minindex := StrFind(receive_str,1,"X");
+			                maxindex := StrFind(receive_str,1,"Y");
+                            str := StrPart(receive_str, minindex+1, maxindex-minindex-1);
+                            transok := StrToVal(str,x1);
+                            IF transok = TRUE THEN
+                                ipos.trans.x := x1;
+                            ENDIF
+                            str := "";
+                            minindex := StrFind(receive_str,1,"Y");
+			                maxindex := StrFind(receive_str,1,"Z");
+                            str := StrPart(receive_str, minindex+1, maxindex-minindex-1);
+                            transok := StrToVal(str,y1);
+                            IF transok = TRUE THEN
+                                ipos.trans.y := y1;
+                            ENDIF
+                            str := "";
+                            minindex := StrFind(receive_str,1,"Z");
+			                maxindex := StrFind(receive_str,1,"Q");
+                            str := StrPart(receive_str, minindex+1, maxindex-minindex-1);
+                            transok := StrToVal(str,z1);
+                            IF transok = TRUE THEN
+                                ipos.trans.z := z1;
+                            ENDIF
+                            
+                            str := "";
+                            minindex := StrFind(receive_str,1,"Q");
+			                maxindex := StrFind(receive_str,1,"W");
+                            str := StrPart(receive_str, minindex+1, maxindex-minindex-1);
+                            transok := StrToVal(str,e1);
+                            str := "";
+                            minindex := StrFind(receive_str,1,"W");
+			                maxindex := StrFind(receive_str,1,"E");
+                            str := StrPart(receive_str, minindex+1, maxindex-minindex-1);
+                            transok := StrToVal(str,e2);
+                            str := "";
+                            minindex := StrFind(receive_str,1,"E");
+			                maxindex := StrFind(receive_str,1,"R");
+                            str := StrPart(receive_str, minindex+1, maxindex-minindex-1);
+                            transok := StrToVal(str,e3);
+                            ipos.rot:=OrientZYX(e3,e2,e1);
+                            
+                            str := "";
+                            minindex := StrFind(receive_str,1,"R");
+			                maxindex := StrFind(receive_str,1,"U");
+                            str := StrPart(receive_str, minindex+1, maxindex-minindex-1);
+                            transok := StrToVal(str,c1);
+                            IF transok = TRUE THEN
+                                ipos.robconf.cf1 := c1;
+                            ENDIF
+                            str := "";
+                            minindex := StrFind(receive_str,1,"U");
+			                maxindex := StrFind(receive_str,1,"I");
+                            str := StrPart(receive_str, minindex+1, maxindex-minindex-1);
+                            transok := StrToVal(str,c4);
+                            IF transok = TRUE THEN
+                                ipos.robconf.cf4 := c4;
+                            ENDIF
+                            str := "";
+                            minindex := StrFind(receive_str,1,"I");
+			                maxindex := StrFind(receive_str,1,"O");
+                            str := StrPart(receive_str, minindex+1, maxindex-minindex-1);
+                            transok := StrToVal(str,c6);
+                            IF transok = TRUE THEN
+                                ipos.robconf.cf6 := c6;
+                            ENDIF                          
+                            str := "";
+                            minindex := StrFind(receive_str,1,"O");
+			                maxindex := StrFind(receive_str,1,"P");
+                            str := StrPart(receive_str, minindex+1, maxindex-minindex-1);
+                            transok := StrToVal(str,cx);
+                            IF transok = TRUE THEN
+                                ipos.robconf.cfx := cx;
+                            ENDIF
+                            !ipos.robconf.cf1 := 0;
+                            !ipos.robconf.cf4 := 0;
+                            !ipos.robconf.cf6 := 0;
+                            !ipos.robconf.cfx := 0;
+                            ipos.extax.eax_a := 9E9;
+                            ipos.extax.eax_b := 9E9;
+                            ipos.extax.eax_c := 9E9;
+                            ipos.extax.eax_d := 9E9;
+                            ipos.extax.eax_e := 9E9;
+                            ipos.extax.eax_f := 9E9;
+                            TPWrite "Move!";     
+                            MoveJ ipos, v50, fine, tool0;
+                        CASE "wai":
+                            sen_str := "reach";
+                            SocketSend client_socket \Str:=sen_str;
+                            
+                        DEFAULT:
+                            TPWrite "Illegal Message!";                          
+                    ENDTEST                    
+                ENDIF
+            ENDWHILE
+        ENDWHILE
+        
+        SocketClose client_socket;
+	    SocketClose server_socket;	
+	    Break;
+        
+        ERROR
+	        IF ERRNO = ERR_SOCK_CLOSED THEN
+                WaitTime 2;
+                flag := FALSE;
+                kinecton := FALSE;
+		        SocketClose client_socket;
+		        TRYNEXT;
+	        ENDIF
+    ENDPROC
+ENDMODULE
+
