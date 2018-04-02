@@ -166,6 +166,10 @@ MODULE TESTmove
                             ipos.extax.eax_f := 9E9;
                             TPWrite "Move!";     
                             MoveJ ipos, v50, fine, tool0;
+                            !添加运动完成的反馈。
+                            sen_str := "finish";
+                            SocketSend client_socket \Str:=sen_str;
+
                         CASE "wai":
                             sen_str := "reach";
                             SocketSend client_socket \Str:=sen_str;
