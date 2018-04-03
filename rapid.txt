@@ -1,4 +1,6 @@
-MODULE TESTmove
+MODULE CaptureCenter
+        TASK PERS tooldata tool_center := [TRUE, [[283.081,6.00714,61.5308], [0.45136,-0.553059,0.481877,-0.508129]], [9, [0, 0, 60], [1, 0, 0, 0], 0, 0, 0]];
+        TASK PERS wobjdata czl_test_center:=[FALSE,TRUE,"",[[-107.807,-990.68,422.484],[0.99938,0.0338474,-0.00391724,0.00885159]],[[0,0,0],[1,0,0,0]]];
     PROC main()
         VAR socketdev server_socket;
 	    VAR socketdev client_socket;
@@ -35,7 +37,8 @@ MODULE TESTmove
         VAR bool transok;
         VAR bool finok;
         !VAR string str15 := "[[20,20,20,0,0,0],[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]]";
-        VAR robtarget p15 := [[600,500,225],[1,0,0,0],[1,1,0,0],[9E9,9E9,9E9,9E9,9E9,9E9]];
+        
+        VAR robtarget p15 := [[-91,40,9.6],[1,0,0,0],[1,1,0,0],[9E9,9E9,9E9,9E9,9E9,9E9]];
         SocketCreate server_socket;
         SocketBind server_socket,"192.168.125.1", 1502;
         SocketListen server_socket;
@@ -60,10 +63,8 @@ MODULE TESTmove
                             flag:=FALSE;
                         CASE "get":
                             TPWrite "Send pos!";
-                            
-			    !读取机械臂当前位置，返回robtarget的值
-                            tpos := CRobT(\Tool:=tool0 \WObj:=wobj0);
-			    ！robtarget.trans的数据类型为pos，.rot数据类型为orient，.robconf数据类型为confdata
+                            !WObj:=czl_test_center
+                            tpos := CRobT(\Tool:=tool_center \WObj:=czl_test_center);
                             x1 := tpos.trans.x;
                             y1 := tpos.trans.y;
                             z1 := tpos.trans.z;
@@ -73,7 +74,9 @@ MODULE TESTmove
                             c1 := tpos.robconf.cf1;
                             c4 := tpos.robconf.cf4;
                             c6 := tpos.robconf.cf6;
+                            !??cx????,??1,??0?
                             cx := tpos.robconf.cfx;
+                            
                             
                             sen_str := "#X"+NumToStr(x1,3)+"Y"+NumToStr(y1,3)+"Z"+NumToStr(z1,3)+"Q"+NumToStr(e1,3)+"W"+NumToStr(e2,3)+"E"+NumToStr(e3,3)+"R"+NumToStr(c1,0)+"U"+NumToStr(c4,0)+"I"+NumToStr(c6,0)+"O"+NumToStr(cx,0)+"P";
                             SocketSend client_socket \Str:=sen_str;
@@ -152,7 +155,8 @@ MODULE TESTmove
                             str := StrPart(receive_str, minindex+1, maxindex-minindex-1);
                             transok := StrToVal(str,cx);
                             IF transok = TRUE THEN
-                                ipos.robconf.cfx := cx;
+                                !???cfx???1,?????
+                                ipos.robconf.cfx := 1;
                             ENDIF
                             !ipos.robconf.cf1 := 0;
                             !ipos.robconf.cf4 := 0;
@@ -164,8 +168,11 @@ MODULE TESTmove
                             ipos.extax.eax_d := 9E9;
                             ipos.extax.eax_e := 9E9;
                             ipos.extax.eax_f := 9E9;
-                            TPWrite "Move!";     
-                            MoveJ ipos, v50, fine, tool0;
+                            TPWrite "Move!";    
+                             TPWrite ""\Num:=ipos.trans.x;
+                             !ipos := Offs(ipos,20,0,0);
+                             !\WObj:=czl_test_center
+                            MoveL ipos, v20, fine, tool_center\WObj:=czl_test_center;
                             !添加运动完成的反馈。
                             sen_str := "finish";
                             SocketSend client_socket \Str:=sen_str;
@@ -194,5 +201,6 @@ MODULE TESTmove
 		        TRYNEXT;
 	        ENDIF
     ENDPROC
-ENDMODULE
 
+
+ENDMODULE
